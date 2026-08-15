@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Health">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0e1216">
+<title>Health Cockpit</title>
+<style>
+:root{
+  --bg:#0e1216; --bg2:#131922; --card:#171e28; --card2:#1e2734; --line:#28323f;
+  --ink:#eaf0f7; --dim:#7f8da1; --dim2:#5d6b7e;
+  --a1:#5ec8a0; --a2:#4aa8d8; --warn:#e8a54b; --bad:#e0705f;
+  --s1:#e0705f; --s2:#e08a4b; --s3:#d4c04a; --s4:#8bc46a; --s5:#5ec8a0;
+  --navh:64px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{background:var(--bg)}
+body{margin:0;color:var(--ink);
+  background:radial-gradient(1100px 620px at 50% -10%,#1b2635 0%,var(--bg) 62%) no-repeat,var(--bg);
+  font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  padding-bottom:calc(var(--navh) + env(safe-area-inset-bottom) + 24px)}
+
+/* ---------- header ---------- */
+header{position:sticky;top:0;z-index:40;
+  padding:calc(env(safe-area-inset-top) + 14px) 18px 0;
+  background:rgba(14,18,22,.82);backdrop-filter:saturate(150%) blur(16px);
+  border-bottom:1px solid var(--line)}
+.hrow{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.greet{font-size:19px;font-weight:680;letter-spacing:-.2px;line-height:1.2}
+.date{color:var(--dim);font-size:12.5px;margin-top:2px}
+.streak{display:flex;align-items:center;gap:5px;padding:6px 11px;border-radius:20px;
+  background:rgba(94,200,160,.13);border:1px solid rgba(94,200,160,.3);
+  color:var(--a1);font-size:12.5px;font-weight:700;white-space:nowrap}
+.bar{height:3px;border-radius:3px;background:var(--line);margin:12px 0 0;overflow:hidden}
+.bar i{display:block;height:100%;width:0;border-radius:3px;
+  background:linear-gradient(90deg,var(--a2),var(--a1));transition:width .35s}
+.barlbl{display:flex;justify-content:space-between;font-size:11px;color:var(--dim2);
+  padding:5px 0 9px;font-weight:600;letter-spacing:.3px}
+
+main{padding:16px 16px 8px;max-width:640px;margin:0 auto}
+.panel{display:none;animation:in .22s ease} .panel.on{display:block}
+@keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ---------- cards ---------- */
+.card{background:linear-gradient(180deg,var(--card) 0%,var(--bg2) 100%);
+  border:1px solid var(--line);border-radius:18px;padding:16px 15px;margin-bottom:13px;
+  box-shadow:0 1px 0 rgba(255,255,255,.03) inset}
+.ch{display:flex;align-items:center;gap:9px;margin:0 0 15px}
+.ch .ico{width:29px;height:29px;border-radius:9px;display:grid;place-items:center;
+  font-size:15px;background:var(--card2);border:1px solid var(--line);flex:none}
+.ch h2{margin:0;font-size:13.5px;font-weight:700;letter-spacing:.2px}
+.ch .hint{margin-left:auto;font-size:11px;color:var(--dim2);font-weight:600}
+
+.row{margin-bottom:16px} .row:last-child{margin-bottom:0}
+label{display:block;font-size:13.5px;color:var(--dim);margin-bottom:8px;font-weight:500}
+
+/* ---------- 1-5 scales ---------- */
+.scale{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}
+.scale button{padding:13px 0;font-size:15px;font-weight:700;border-radius:12px;
+  border:1px solid var(--line);background:var(--card2);color:var(--dim2);
+  transition:transform .12s,background .15s,color .15s}
+.scale button:active{transform:scale(.93)}
+.scale button.sel{color:#0c1116;border-color:transparent;box-shadow:0 3px 14px rgba(0,0,0,.35)}
+.sc-ends{display:flex;justify-content:space-between;margin-top:6px;
+  font-size:10.5px;color:var(--dim2);font-weight:600;letter-spacing:.3px}
+
+/* ---------- steppers ---------- */
+.step{display:flex;align-items:center;gap:11px}
+.step button{width:50px;height:50px;font-size:24px;font-weight:500;border-radius:14px;
+  border:1px solid var(--line);background:var(--card2);color:var(--ink);
+  transition:transform .12s}
+.step button:active{transform:scale(.9);background:var(--line)}
+.step .val{flex:1;text-align:center}
+.step .val b{font-size:23px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.5px}
+.step .val small{display:block;font-size:10.5px;color:var(--dim2);font-weight:600;
+  letter-spacing:.6px;text-transform:uppercase;margin-top:1px}
+
+input,textarea,select{width:100%;padding:13px;font-size:16px;border-radius:12px;
+  border:1px solid var(--line);background:var(--card2);color:var(--ink);
+  font-family:inherit;-webkit-appearance:none}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--a1)}
+input[type=file]{padding:11px;font-size:13px;color:var(--dim)}
+textarea{min-height:120px;resize:vertical;line-height:1.5}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+
+/* ---------- toggles ---------- */
+.tg{display:flex;align-items:center;gap:11px;padding:13px 14px;border:1px solid var(--line);
+  border-radius:13px;background:var(--card2);margin-bottom:9px;font-size:14.5px;
+  transition:border-color .15s,background .15s}
+.tg:last-child{margin-bottom:0}
+.tg .em{font-size:17px;flex:none}
+.tg .sw{margin-left:auto;width:46px;height:28px;border-radius:16px;background:var(--line);
+  position:relative;flex:none;transition:background .2s}
+.tg .sw::after{content:'';position:absolute;top:3px;left:3px;width:22px;height:22px;
+  border-radius:50%;background:var(--dim);transition:transform .2s,background .2s}
+.tg.on{border-color:rgba(94,200,160,.45);background:rgba(94,200,160,.09)}
+.tg.on .sw{background:var(--a1)}
+.tg.on .sw::after{transform:translateX(18px);background:#0c1116}
+
+/* ---------- meds ---------- */
+.med{display:flex;align-items:center;gap:10px;padding:12px 13px;border:1px solid var(--line);
+  border-radius:13px;background:var(--card2);margin-bottom:9px}
+.med .tx{flex:1;min-width:0}
+.med .nm{font-size:14.5px;font-weight:600;line-height:1.25}
+.med .ds{font-size:11.5px;color:var(--dim2);margin-top:1px}
+.med .bt{display:flex;gap:6px;flex:none}
+.med .bt button{width:42px;height:38px;border-radius:10px;border:1px solid var(--line);
+  background:var(--card);color:var(--dim2);font-size:16px;transition:transform .12s}
+.med .bt button:active{transform:scale(.9)}
+.med.y{border-color:rgba(94,200,160,.45);background:rgba(94,200,160,.09)}
+.med.y .bt .y{background:var(--a1);border-color:var(--a1);color:#0c1116}
+.med.n{border-color:rgba(224,112,95,.45);background:rgba(224,112,95,.09)}
+.med.n .bt .n{background:var(--bad);border-color:var(--bad);color:#fff}
+
+.save{width:100%;padding:17px;font-size:16.5px;font-weight:750;border-radius:16px;border:0;
+  background:linear-gradient(135deg,var(--a1),#49b78f);color:#08120e;margin:4px 0 6px;
+  box-shadow:0 6px 22px rgba(94,200,160,.22);transition:transform .12s}
+.save:active{transform:scale(.98)}
+.save:disabled{opacity:.55}
+.note{font-size:11.5px;color:var(--dim2);margin-top:10px;line-height:1.55}
+.done{text-align:center;padding:9px;font-size:12.5px;color:var(--a1);font-weight:650}
+
+/* ---------- nav ---------- */
+nav{position:fixed;left:0;right:0;bottom:0;z-index:50;display:grid;
+  grid-template-columns:repeat(3,1fr);height:calc(var(--navh) + env(safe-area-inset-bottom));
+  padding-bottom:env(safe-area-inset-bottom);
+  background:rgba(14,18,22,.94);backdrop-filter:saturate(150%) blur(16px);
+  border-top:1px solid var(--line)}
+nav button{background:none;border:0;color:var(--dim2);font-size:10.5px;font-weight:700;
+  letter-spacing:.3px;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:3px;height:var(--navh)}
+nav button .ic{font-size:19px;line-height:1}
+nav button.on{color:var(--a1)}
+
+/* ---------- toast: sits ABOVE the nav, clear of the home indicator ---------- */
+#toast{position:fixed;left:16px;right:16px;z-index:60;
+  bottom:calc(var(--navh) + env(safe-area-inset-bottom) + 14px);
+  padding:14px 16px;border-radius:14px;background:var(--a1);color:#08120e;
+  font-weight:700;font-size:14px;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.5);
+  opacity:0;visibility:hidden;transform:translateY(14px);
+  transition:opacity .2s,transform .2s,visibility .2s;pointer-events:none}
+#toast.show{opacity:1;visibility:visible;transform:none}
+#toast.err{background:var(--bad);color:#fff}
+#toast.info{background:var(--card2);color:var(--ink);border:1px solid var(--line)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hrow">
+    <div>
+      <div class="greet" id="greet">Today</div>
+      <div class="date" id="date"></div>
+    </div>
+    <div class="streak" id="streak">🔥 <span>—</span></div>
+  </div>
+  <div class="bar"><i id="barfill"></i></div>
+  <div class="barlbl"><span id="barTxt">NOT STARTED</span><span id="barPct">0%</span></div>
+</header>
+
+<main>
+
+<!-- ============ TODAY : one screen, once a day ============ -->
+<section class="panel on" id="p-day">
+
+  <div class="card">
+    <div class="ch"><span class="ico">😴</span><h2>Last night's sleep</h2></div>
+    <div class="row">
+      <div class="step" data-step="sleep_hours" data-min="0" data-max="14" data-inc="0.5" data-def="7" data-unit="hours">
+        <button type="button" data-d="-1">−</button>
+        <div class="val"><b>7</b><small>hours</small></div>
+        <button type="button" data-d="1">+</button>
+      </div>
+    </div>
+    <div class="row">
+      <label>How well did you sleep?</label>
+      <div class="scale" data-scale="sleep_quality"></div>
+      <div class="sc-ends"><span>BROKEN</span><span>DEEP</span></div>
+    </div>
+    <div class="row g2">
+      <div><label>To bed</label><input type="time" data-f="bed_time"></div>
+      <div><label>Woke</label><input type="time" data-f="wake_time"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch"><span class="ico">⚖️</span><h2>Body</h2><span class="hint">optional</span></div>
+    <div class="row g2">
+      <div><label>Weight (kg)</label><input type="number" step="0.1" inputmode="decimal" data-f="weight_kg"></div>
+      <div><label>Resting HR</label><input type="number" inputmode="numeric" data-f="resting_hr"></div>
+    </div>
+    <div class="row g2">
+      <div><label>BP systolic</label><input type="number" inputmode="numeric" data-f="bp_sys"></div>
+      <div><label>BP diastolic</label><input type="number" inputmode="numeric" data-f="bp_dia"></div>
+    </div>
+    <div class="note">Weight most days. BP two or three times a week is plenty unless a doctor has said otherwise.</div>
+  </div>
+
+  <div class="card">
+    <div class="ch"><span class="ico">🧘</span><h2>Movement &amp; practice</h2></div>
+    <div class="row">
+      <label>Yoga</label>
+      <div class="step" data-step="yoga_min" data-min="0" data-max="120" data-inc="5" data-def="0" data-unit="minutes">
+        <button type="button" data-d="-1">−</button><div class="val"><b>0</b><small>minutes</small></div><button type="button" data-d="1">+</button>
+      </div>
+    </div>
+    <div class="row">
+      <label>Pranayama</label>
+      <div class="step" data-step="pranayama_min" data-min="0" data-max="60" data-inc="5" data-def="0" data-unit="minutes">
+        <button type="button" data-d="-1">−</button><div class="val"><b>0</b><small>minutes</small></div><button type="button" data-d="1">+</button>
+      </div>
+    </div>
+    <div class="row">
+      <label>Walk</label>
+      <div class="step" data-step="walk_min" data-min="0" data-max="180" data-inc="10" data-def="0" data-unit="minutes">
+        <button type="button" data-d="-1">−</button><div class="val"><b>0</b><small>minutes</small></div><button type="button" data-d="1">+</button>
+      </div>
+    </div>
+    <div class="row g2">
+      <div><label>Strength (min)</label><input type="number" inputmode="numeric" data-f="strength_min"></div>
+      <div><label>Steps</label><input type="number" inputmode="numeric" data-f="steps"></div>
+    </div>
+    <div class="row"><label>Time outdoors (min)</label><input type="number" inputmode="numeric" data-f="outdoors_min"></div>
+  </div>
+
+  <div class="card">
+    <div class="ch"><span class="ico">🍵</span><h2>Fuel</h2></div>
+    <div class="row">
+      <label>Water</label>
+      <div class="step" data-step="water_glasses" data-min="0" data-max="20" data-inc="1" data-def="0" data-unit="glasses">
+        <button type="button" data-d="-1">−</button><div class="val"><b>0</b><small>glasses</small></div><button type="button" data-d="1">+</button>
+      </div>
+    </div>
+    <div class="row">
+      <label>Caffeine</label>
+      <div class="step" data-step="caffeine_cups" data-min="0" data-max="10" data-inc="1" data-def="0" data-unit="cups">
+        <button type="button" data-d="-1">−</button><div class="val"><b>0</b><small>cups</small></div><button type="button" data-d="1">+</button>
+      </div>
+    </div>
+    <div class="row">
+      <label>How well did you eat today?</label>
+      <div class="scale" data-scale="meal_quality"></div>
+      <div class="sc-ends"><span>POORLY</span><span>VERY WELL</span></div>
+    </div>
+    <div class="row"><label>Last meal at</label><input type="time" data-f="last_meal_time"></div>
+    <div class="tg" data-toggle="evening_light"><span class="em">🥣</span><span>Dinner was light &amp; warm</span><span class="sw"></span></div>
+    <div class="tg" data-toggle="alcohol"><span class="em">🍷</span><span>Alcohol today</span><span class="sw"></span></div>
+    <div class="tg" data-toggle="screen_before_bed"><span class="em">📱</span><span>Screens in the hour before bed</span><span class="sw"></span></div>
+  </div>
+
+  <div class="card">
+    <div class="ch"><span class="ico">💊</span><h2>Medicines</h2><span class="hint">tap ✓ or ✕</span></div>
+    <div id="meds"></div>
+    <div class="note">Edit this list any time in the <b>Meds</b> tab of your HealthLog sheet.</div>
+  </div>
+
+  <div class="card">
+    <div class="ch"><span class="ico">🌤️</span><h2>How the day felt</h2></div>
+    <div class="row"><label>Energy</label><div class="scale" data-scale="energy_pm"></div>
+      <div class="sc-ends"><span>DEPLETED</span><span>STRONG</span></div></div>
+    <div class="row"><label>Mood</label><div class="scale" data-scale="mood"></div>
+      <div class="sc-ends"><span>LOW</span><span>BRIGHT</span></div></div>
+    <div class="row"><label>Stress</label><div class="scale" data-scale="stress" data-invert="1"></div>
+      <div class="sc-ends"><span>CALM</span><span>WOUND UP</span></div></div>
+    <div class="row"><label>Neck / body pain</label><div class="scale" data-scale="pain_neck" data-invert="1"></div>
+      <div class="sc-ends"><span>NONE</span><span>BAD</span></div></div>
+    <div class="row"><label>Digestion</label><div class="scale" data-scale="digestion"></div>
+      <div class="sc-ends"><span>OFF</span><span>SETTLED</span></div></div>
+    <div class="row"><label>One line about today</label>
+      <input type="text" data-f="note" placeholder="Neck eased after the evening walk…"></div>
+  </div>
+
+  <button class="save" data-save="day">Save today</button>
+  <div class="done" id="savedNote"></div>
+</section>
+
+<!-- ============ JOURNAL ============ -->
+<section class="panel" id="p-jr">
+  <div class="card">
+    <div class="ch"><span class="ico">📝</span><h2>Health journal</h2></div>
+    <div class="row">
+      <label>What kind of note is this?</label>
+      <select id="jtag">
+        <option value="observation">Observation — something I noticed</option>
+        <option value="pattern">Pattern — "every time X, then Y"</option>
+        <option value="experiment">Experiment — trying something new</option>
+        <option value="symptom">Symptom — worth telling a doctor</option>
+        <option value="win">Win — something that clearly worked</option>
+      </select>
+    </div>
+    <div class="row">
+      <label>Write it plainly</label>
+      <textarea id="jtext" placeholder="Third week running: on days I finish dinner before 7:30 I fall asleep within fifteen minutes."></textarea>
+    </div>
+    <button class="save" data-save="journal">Save entry</button>
+    <div class="note">Entries tagged <b>pattern</b> and <b>win</b> are the ones promoted into your Health Pillars at the monthly review. Write these as you notice them — not at review time.</div>
+  </div>
+</section>
+
+<!-- ============ REPORTS ============ -->
+<section class="panel" id="p-rp">
+  <div class="card">
+    <div class="ch"><span class="ico">📄</span><h2>Upload a medical report</h2></div>
+    <div class="row"><label>Report date</label><input type="date" id="rdate"></div>
+    <div class="row">
+      <label>Type</label>
+      <select id="rtype">
+        <option>Blood panel</option><option>Lipid profile</option><option>HbA1c</option>
+        <option>Thyroid</option><option>Vitamin D / B12</option><option>Ferritin / Iron</option>
+        <option>Imaging (X-ray / MRI / CT)</option><option>ECG</option>
+        <option>Prescription</option><option>Doctor note</option><option>Other</option>
+      </select>
+    </div>
+    <div class="row"><label>File (PDF or photo)</label><input type="file" id="rfile" accept="application/pdf,image/*"></div>
+    <div class="row"><label>Notes</label><input type="text" id="rnotes" placeholder="Fasting, follow-up in 3 months"></div>
+    <button class="save" data-save="report">Upload to Drive</button>
+    <div class="note">Goes to <b>Health Cockpit → Reports → year</b> and gets indexed in the Reports tab. A real PDF from the lab beats a photo — it stays searchable.</div>
+  </div>
+</section>
+
+</main>
+
+<nav>
+  <button class="on" data-go="p-day"><span class="ic">☀️</span>TODAY</button>
+  <button data-go="p-jr"><span class="ic">📝</span>JOURNAL</button>
+  <button data-go="p-rp"><span class="ic">📄</span>REPORTS</button>
+</nav>
+
+<div id="toast"></div>
+
+<script>
+/* ==================== CONFIG ==================== */
+var API   = 'https://script.google.com/macros/s/AKfycbybwtD6QOGHvFF-Fa0UfwlmV8OK3AG-d6Ihx06WGHdIdQTGdvhvepCAFU0IvT578_MN/exec';
+var TOKEN = 'hc_BFUoCLImLthnj2pXX9MSx9u8';
+/* =============================================== */
+
+var FALLBACK_MEDS = [
+  {id:'m1', name:'Vitamin D3', dose:'60000 IU', schedule:'weekly'},
+  {id:'m2', name:'Magnesium',  dose:'400 mg',   schedule:'daily-evening'},
+  {id:'m3', name:'B12',        dose:'1500 mcg', schedule:'daily-morning'}
+];
+var SCALE_COLORS = ['var(--s1)','var(--s2)','var(--s3)','var(--s4)','var(--s5)'];
+
+var state = {}, medState = {};
+var QKEY = 'hc_queue_v2', DKEY = 'hc_draft_v2';
+/* fields counted for the progress bar */
+var TRACKED = ['sleep_quality','bed_time','wake_time','weight_kg','yoga_min','pranayama_min',
+               'walk_min','water_glasses','meal_quality','last_meal_time',
+               'energy_pm','mood','stress','pain_neck','digestion','note'];
+
+function today(){var d=new Date(),p=function(n){return(n<10?'0':'')+n;};
+  return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());}
+function q(s,r){return (r||document).querySelectorAll(s);}
+function buzz(){ if(navigator.vibrate) navigator.vibrate(8); }
+
+function toast(msg,kind){
+  var t=document.getElementById('toast');
+  t.textContent=msg; t.className='show'+(kind?' '+kind:'');
+  clearTimeout(t._h); t._h=setTimeout(function(){t.className='';},2800);
+}
+
+/* ---------- progress ---------- */
+function progress(){
+  var n=0;
+  TRACKED.forEach(function(f){
+    var v=state[f];
+    if(v!==undefined&&v!==null&&v!==''&&!(f.indexOf('_min')>0&&v===0)) n++;
+  });
+  var pct=Math.round(100*n/TRACKED.length);
+  document.getElementById('barfill').style.width=pct+'%';
+  document.getElementById('barPct').textContent=pct+'%';
+  var t=document.getElementById('barTxt');
+  t.textContent = pct===0?'NOT STARTED' : pct<40?'GETTING GOING' : pct<80?'ALMOST THERE' : 'READY TO SAVE';
+}
+
+/* ---------- offline-safe send ---------- */
+function queue(i){var a=JSON.parse(localStorage.getItem(QKEY)||'[]');a.push(i);
+  localStorage.setItem(QKEY,JSON.stringify(a));}
+function post(action,payload,done){
+  var item={action:action,token:TOKEN,payload:payload};
+  fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body:JSON.stringify(item)})
+  .then(function(r){return r.json();})
+  .then(function(res){
+    if(res&&res.ok){ if(res.streak!=null) setStreak(res.streak); done(true,res); }
+    else { queue(item); done(false,res); }
+  })
+  .catch(function(){ queue(item); done(false,null); });
+}
+function flush(){
+  var a=JSON.parse(localStorage.getItem(QKEY)||'[]');
+  if(!a.length||!navigator.onLine) return;
+  localStorage.setItem(QKEY,'[]');
+  a.forEach(function(i){
+    fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify(i)})
+    .then(function(r){return r.json();})
+    .then(function(res){ if(!res||!res.ok) queue(i); })
+    .catch(function(){ queue(i); });
+  });
+  if(a.length) toast(a.length+' saved entr'+(a.length>1?'ies':'y')+' synced','info');
+}
+function setStreak(n){
+  document.querySelector('#streak span').textContent = n + (n===1?' day':' days');
+}
+
+/* ---------- scales ---------- */
+q('[data-scale]').forEach(function(box){
+  var f=box.dataset.scale, inv=box.dataset.invert==='1';
+  for(var i=0;i<5;i++){(function(i){
+    var b=document.createElement('button');
+    b.type='button'; b.textContent=i+1;
+    b.onclick=function(){
+      q('button',box).forEach(function(x){x.classList.remove('sel');x.style.background='';});
+      b.classList.add('sel');
+      b.style.background = SCALE_COLORS[inv ? 4-i : i];
+      state[f]=i+1; buzz(); saveDraft(); progress();
+    };
+    box.appendChild(b);
+  })(i);}
+});
+
+/* ---------- steppers ---------- */
+q('[data-step]').forEach(function(box){
+  var f=box.dataset.step,
+      min=parseFloat(box.dataset.min), max=parseFloat(box.dataset.max),
+      inc=parseFloat(box.dataset.inc), val=parseFloat(box.dataset.def);
+  var out=box.querySelector('.val b');
+  state[f]=val; out.textContent=val;
+  q('button',box).forEach(function(b){
+    b.onclick=function(){
+      val=Math.min(max,Math.max(min,val+inc*parseFloat(b.dataset.d)));
+      val=Math.round(val*10)/10;
+      out.textContent=val; state[f]=val; buzz(); saveDraft(); progress();
+    };
+  });
+});
+
+/* ---------- toggles ---------- */
+q('[data-toggle]').forEach(function(t){
+  state[t.dataset.toggle]='no';
+  t.onclick=function(){
+    var on=t.classList.toggle('on');
+    state[t.dataset.toggle]=on?'yes':'no'; buzz(); saveDraft();
+  };
+});
+
+/* ---------- free inputs ---------- */
+q('[data-f]').forEach(function(el){
+  el.oninput=function(){ state[el.dataset.f]=el.value; saveDraft(); progress(); };
+});
+
+/* ---------- draft ---------- */
+function saveDraft(){
+  localStorage.setItem(DKEY,JSON.stringify({date:today(),state:state,meds:medState}));
+}
+function loadDraft(){
+  try{
+    var d=JSON.parse(localStorage.getItem(DKEY)||'{}');
+    if(d.date!==today()) return;
+    Object.keys(d.state||{}).forEach(function(k){ state[k]=d.state[k]; });
+    medState=d.meds||{};
+    q('[data-f]').forEach(function(el){ if(state[el.dataset.f]) el.value=state[el.dataset.f]; });
+    q('[data-scale]').forEach(function(box){
+      var v=state[box.dataset.scale], inv=box.dataset.invert==='1';
+      if(v){ var b=box.querySelectorAll('button')[v-1];
+             b.classList.add('sel'); b.style.background=SCALE_COLORS[inv?5-v:v-1]; }
+    });
+    q('[data-step]').forEach(function(box){
+      var v=state[box.dataset.step];
+      if(v!=null) box.querySelector('.val b').textContent=v;
+    });
+    q('[data-toggle]').forEach(function(t){
+      if(state[t.dataset.toggle]==='yes') t.classList.add('on');
+    });
+  }catch(e){}
+}
+
+/* ---------- meds ---------- */
+function renderMeds(list){
+  var w=document.getElementById('meds'); w.innerHTML='';
+  list.forEach(function(m){
+    var row=document.createElement('div'); row.className='med';
+    row.innerHTML='<div class="tx"><div class="nm">'+m.name+'</div>'+
+      '<div class="ds">'+(m.dose||'')+(m.schedule?' · '+m.schedule:'')+'</div></div>';
+    var bt=document.createElement('div'); bt.className='bt';
+    var y=document.createElement('button'); y.className='y'; y.textContent='✓';
+    var n=document.createElement('button'); n.className='n'; n.textContent='✕';
+    function paint(){
+      row.classList.remove('y','n');
+      if(medState[m.id]==='taken') row.classList.add('y');
+      if(medState[m.id]==='missed') row.classList.add('n');
+    }
+    y.onclick=function(){medState[m.id]=medState[m.id]==='taken'?null:'taken';paint();buzz();saveDraft();};
+    n.onclick=function(){medState[m.id]=medState[m.id]==='missed'?null:'missed';paint();buzz();saveDraft();};
+    paint(); bt.appendChild(y); bt.appendChild(n); row.appendChild(bt); w.appendChild(row);
+  });
+  window._meds=list;
+}
+function medSummary(){
+  var l=window._meds||[],t=[],m=[];
+  l.forEach(function(x){
+    if(medState[x.id]==='taken') t.push(x.name);
+    if(medState[x.id]==='missed') m.push(x.name);
+  });
+  return {meds_taken:t.join(', '),meds_missed:m.join(', ')};
+}
+
+/* ---------- nav ---------- */
+q('nav button').forEach(function(b){
+  b.onclick=function(){
+    q('nav button').forEach(function(x){x.classList.remove('on');});
+    q('.panel').forEach(function(p){p.classList.remove('on');});
+    b.classList.add('on');
+    document.getElementById(b.dataset.go).classList.add('on');
+    window.scrollTo(0,0);
+  };
+});
+
+/* ---------- saves ---------- */
+q('[data-save]').forEach(function(btn){
+  btn.onclick=function(){
+    var kind=btn.dataset.save;
+    btn.disabled=true; setTimeout(function(){btn.disabled=false;},1400);
+
+    if(kind==='journal'){
+      var tx=document.getElementById('jtext').value.trim();
+      if(!tx){ toast('Nothing written yet','err'); return; }
+      post('journal',{date:today(),tag:document.getElementById('jtag').value,entry:tx},
+        function(ok){
+          document.getElementById('jtext').value='';
+          toast(ok?'Journal entry saved':'Saved on your phone — will sync',ok?'':'err');
+        });
+      return;
+    }
+
+    if(kind==='report'){
+      var f=document.getElementById('rfile').files[0];
+      if(!f){ toast('Pick a file first','err'); return; }
+      if(f.size>8*1024*1024){ toast('Too large — keep it under 8 MB','err'); return; }
+      toast('Uploading…','info');
+      var fr=new FileReader();
+      fr.onload=function(){
+        post('upload',{
+          date:document.getElementById('rdate').value||today(),
+          reportType:document.getElementById('rtype').value,
+          notes:document.getElementById('rnotes').value,
+          fileName:f.name, mimeType:f.type||'application/pdf',
+          fileData:fr.result.split(',')[1]
+        },function(ok){
+          if(ok){document.getElementById('rfile').value='';document.getElementById('rnotes').value='';}
+          toast(ok?'Report saved to Drive':'Queued — will upload when online',ok?'':'err');
+        });
+      };
+      fr.readAsDataURL(f);
+      return;
+    }
+
+    var payload=Object.assign({date:today()},state,medSummary());
+    post('log',payload,function(ok){
+      toast(ok?'Today saved ✓':'Saved on your phone — will sync',ok?'':'err');
+      if(ok) document.getElementById('savedNote').textContent='Saved. Come back tomorrow.';
+    });
+  };
+});
+
+/* ---------- boot ---------- */
+var h=new Date().getHours();
+document.getElementById('greet').textContent =
+  h<12 ? 'Good morning, Anshuman' : h<17 ? 'Good afternoon, Anshuman' : 'Good evening, Anshuman';
+document.getElementById('date').textContent =
+  new Date().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'});
+document.getElementById('rdate').value=today();
+
+loadDraft();
+renderMeds(FALLBACK_MEDS);
+progress();
+flush();
+window.addEventListener('online',flush);
+
+fetch(API+'?action=config&token='+encodeURIComponent(TOKEN))
+  .then(function(r){return r.json();})
+  .then(function(res){ if(res&&res.ok&&res.meds&&res.meds.length) renderMeds(res.meds); })
+  .catch(function(){});
+
+fetch(API+'?action=streak&token='+encodeURIComponent(TOKEN))
+  .then(function(r){return r.json();})
+  .then(function(res){ if(res&&res.ok) setStreak(res.streak); })
+  .catch(function(){ document.querySelector('#streak span').textContent='offline'; });
+</script>
+</body>
+</html>
